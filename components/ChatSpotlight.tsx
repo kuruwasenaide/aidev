@@ -5,6 +5,7 @@
  */
 
 import { useChat } from "@/contexts/ChatContext";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, Command, Sparkles } from "lucide-react";
@@ -20,6 +21,7 @@ export default function ChatSpotlight({ onMessageSent }: ChatSpotlightProps) {
   const [inputValue, setInputValue] = useState("");
   const spotlightInputRef = useRef<HTMLInputElement>(null);
   const { sendMessage } = useChat();
+  const reducedMotion = usePrefersReducedMotion();
 
   // ⌘K / Ctrl+K shortcut to open spotlight
   useEffect(() => {
@@ -98,13 +100,13 @@ export default function ChatSpotlight({ onMessageSent }: ChatSpotlightProps) {
               className="fixed inset-0 z-40"
               style={{
                 background: "var(--spotlight-overlay)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
+                backdropFilter: reducedMotion ? "none" : "blur(12px)",
+                WebkitBackdropFilter: reducedMotion ? "none" : "blur(12px)",
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: reducedMotion ? 0.1 : 0.2 }}
               onClick={closeSpotlight}
             />
 
@@ -122,7 +124,11 @@ export default function ChatSpotlight({ onMessageSent }: ChatSpotlightProps) {
                 initial={{ scale: 0.9, y: -150, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
                 exit={{ scale: 0.9, y: 24, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 400, damping: 35 }}
+              transition={
+                reducedMotion
+                  ? { duration: 0.15 }
+                  : { type: "spring", stiffness: 400, damping: 35 }
+              }
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Glow behind input */}
@@ -145,7 +151,12 @@ export default function ChatSpotlight({ onMessageSent }: ChatSpotlightProps) {
                     "ring-1 ring-primary/15"
                   )}
                 >
-                  <Sparkles className="w-5 h-5 shrink-0 text-primary animate-pulse" />
+                  <Sparkles
+                    className={cn(
+                      "w-5 h-5 shrink-0 text-primary",
+                      reducedMotion ? "" : "animate-pulse"
+                    )}
+                  />
                   <input
                     ref={spotlightInputRef}
                     type="text"

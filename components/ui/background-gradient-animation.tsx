@@ -1,8 +1,9 @@
 "use client";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { useEffect, useRef } from "react";
 
-const SMOOTHING = 0.08; // menor = mais suave (0.05–0.15)
+const SMOOTHING = 0.08;
 
 export const BackgroundGradientAnimation = ({
   gradientBackgroundStart = "rgb(108, 0, 162)",
@@ -39,41 +40,41 @@ export const BackgroundGradientAnimation = ({
   const curRef = useRef({ x: 0, y: 0 });
   const tgRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number>(0);
-
-  const gradientKey = [
-    gradientBackgroundStart,
-    gradientBackgroundEnd,
-    firstColor,
-    secondColor,
-    thirdColor,
-    fourthColor,
-    fifthColor,
-    pointerColor,
-    size,
-    blendingValue,
-  ].join("|");
+  const reducedMotion = usePrefersReducedMotion();
+  const interactiveEnabled = interactive && !reducedMotion;
 
   useEffect(() => {
-    document.body.style.setProperty(
+    document.documentElement.style.setProperty(
       "--gradient-background-start",
       gradientBackgroundStart
     );
-    document.body.style.setProperty(
+    document.documentElement.style.setProperty(
       "--gradient-background-end",
       gradientBackgroundEnd
     );
-    document.body.style.setProperty("--first-color", firstColor);
-    document.body.style.setProperty("--second-color", secondColor);
-    document.body.style.setProperty("--third-color", thirdColor);
-    document.body.style.setProperty("--fourth-color", fourthColor);
-    document.body.style.setProperty("--fifth-color", fifthColor);
-    document.body.style.setProperty("--pointer-color", pointerColor);
-    document.body.style.setProperty("--size", size);
-    document.body.style.setProperty("--blending-value", blendingValue);
-  }, [gradientKey]);
+    document.documentElement.style.setProperty("--first-color", firstColor);
+    document.documentElement.style.setProperty("--second-color", secondColor);
+    document.documentElement.style.setProperty("--third-color", thirdColor);
+    document.documentElement.style.setProperty("--fourth-color", fourthColor);
+    document.documentElement.style.setProperty("--fifth-color", fifthColor);
+    document.documentElement.style.setProperty("--pointer-color", pointerColor);
+    document.documentElement.style.setProperty("--size", size);
+    document.documentElement.style.setProperty("--blending-value", blendingValue);
+  }, [
+    blendingValue,
+    fifthColor,
+    firstColor,
+    fourthColor,
+    gradientBackgroundEnd,
+    gradientBackgroundStart,
+    pointerColor,
+    secondColor,
+    size,
+    thirdColor,
+  ]);
 
   useEffect(() => {
-    if (!interactive) return;
+    if (!interactiveEnabled) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       tgRef.current = { x: e.clientX, y: e.clientY };
@@ -98,12 +99,7 @@ export const BackgroundGradientAnimation = ({
       document.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(rafRef.current);
     };
-  }, [interactive]);
-
-  const [isSafari, setIsSafari] = useState(false);
-  useEffect(() => {
-    setIsSafari(/^((?!chrome|android).)*safari/i.test(navigator.userAgent));
-  }, []);
+  }, [interactiveEnabled]);
 
   return (
     <div
@@ -134,7 +130,7 @@ export const BackgroundGradientAnimation = ({
       <div
         className={cn(
           "gradients-container h-full w-full blur-lg",
-          isSafari ? "blur-2xl" : "[filter:url(#blurMe)_blur(40px)]"
+          "[filter:url(#blurMe)_blur(32px)]"
         )}
       >
         <div
@@ -173,7 +169,8 @@ export const BackgroundGradientAnimation = ({
             `opacity-70`
           )}
         ></div>
-        <div
+        {!reducedMotion && (
+          <div
           className={cn(
             `absolute [background:radial-gradient(circle_at_center,_rgba(var(--fifth-color),_0.8)_0,_rgba(var(--fifth-color),_0)_50%)_no-repeat]`,
             `[mix-blend-mode:var(--blending-value)] w-[var(--size)] h-[var(--size)] top-[calc(50%-var(--size)/2)] left-[calc(50%-var(--size)/2)]`,
@@ -181,9 +178,10 @@ export const BackgroundGradientAnimation = ({
             `animate-fifth`,
             `opacity-100`
           )}
-        ></div>
+          ></div>
+        )}
 
-        {interactive && (
+        {interactiveEnabled && (
           <div
             ref={interactiveRef}
             className={cn(

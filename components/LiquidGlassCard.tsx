@@ -4,9 +4,8 @@
  */
 
 import { cn } from "@/lib/utils";
-import { useMousePosition } from "@/hooks/useMousePosition";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { useRef, type ReactNode } from "react";
+import { useCallback, useRef, type PointerEvent, type ReactNode } from "react";
 
 interface LiquidGlassCardProps {
   children: ReactNode;
@@ -21,44 +20,53 @@ export default function LiquidGlassCard({
   elevated = false,
   interactive = true,
 }: LiquidGlassCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const mouse = useMousePosition();
+  const specularRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
+  const isInteractive = interactive && !reducedMotion;
 
-  // Calculate specular highlight position relative to card
-  const getSpecularStyle = () => {
-    if (!interactive || reducedMotion || !cardRef.current) {
-      return { opacity: 0 };
-    }
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = ((mouse.x - rect.left) / rect.width) * 100;
-    const y = ((mouse.y - rect.top) / rect.height) * 100;
-    const isInside =
-      mouse.x >= rect.left &&
-      mouse.x <= rect.right &&
-      mouse.y >= rect.top &&
-      mouse.y <= rect.bottom;
+  const handlePointerEnter = useCallback(() => {
+    if (!isInteractive || !specularRef.current) return;
+    specularRef.current.style.opacity = "1";
+  }, [isInteractive]);
 
-    return {
-      background: `radial-gradient(circle at ${x}% ${y}%, var(--glass-glow), transparent 60%)`,
-      opacity: isInside ? 1 : 0,
-      transition: "opacity 0.4s ease",
-    };
-  };
+  const handlePointerLeave = useCallback(() => {
+    if (!specularRef.current) return;
+    specularRef.current.style.opacity = "0";
+  }, []);
+
+  const handlePointerMove = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      if (!isInteractive || !specularRef.current) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 100;
+      const y = ((event.clientY - rect.top) / rect.height) * 100;
+      specularRef.current.style.setProperty("--specular-x", `${x}%`);
+      specularRef.current.style.setProperty("--specular-y", `${y}%`);
+    },
+    [isInteractive]
+  );
 
   return (
     <div
-      ref={cardRef}
       className={cn(
         "liquid-glass",
         elevated && "liquid-glass-elevated",
         className
       )}
+      onPointerMove={isInteractive ? handlePointerMove : undefined}
+      onPointerEnter={isInteractive ? handlePointerEnter : undefined}
+      onPointerLeave={isInteractive ? handlePointerLeave : undefined}
     >
       {/* Mouse-reactive specular highlight */}
       <div
+        ref={specularRef}
         className="absolute inset-0 pointer-events-none z-[3] rounded-[inherit]"
-        style={getSpecularStyle()}
+        style={{
+          background:
+            "radial-gradient(circle at var(--specular-x, 50%) var(--specular-y, 50%), var(--glass-glow), transparent 60%)",
+          opacity: 0,
+          transition: "opacity 0.35s ease",
+        }}
       />
       {/* Content */}
       <div className="relative z-[4]">{children}</div>

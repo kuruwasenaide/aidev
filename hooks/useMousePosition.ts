@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 interface MousePosition {
   x: number;
@@ -7,35 +7,78 @@ interface MousePosition {
   normalizedY: number;
 }
 
-export function useMousePosition(): MousePosition {
-  const [position, setPosition] = useState<MousePosition>({
-    x: 0,
-    y: 0,
-    normalizedX: 0,
-    normalizedY: 0,
-  });
+const INITIAL_POSITION: MousePosition = {
+  x: 0,
+  y: 0,
+  normalizedX: 0,
+  normalizedY: 0,
+};
 
-  const rafRef = useRef<number>(0);
+let mousePosition: MousePosition = INITIAL_POSITION;
+let rafId = 0;
+let pendingMouseEvent: MouseEvent | null = null;
+const listeners = new Set<() => void>();
+let isListening = false;
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      setPosition({
-        x: e.clientX,
-        y: e.clientY,
-        normalizedX: (e.clientX / window.innerWidth - 0.5) * 2,
-        normalizedY: (e.clientY / window.innerHeight - 0.5) * 2,
-      });
-    });
-  }, []);
+function emit() {
+  listeners.forEach((listener) => listener());
+}
 
-  useEffect(() => {
-    window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [handleMouseMove]);
+function commitPendingMouseEvent() {
+  rafId = 0;
+  if (!pendingMouseEvent) return;
+  const event = pendingMouseEvent;
+  pendingMouseEvent = null;
+  mousePosition = {
+    x: event.clientX,
+    y: event.clientY,
+    normalizedX: (event.clientX / window.innerWidth - 0.5) * 2,
+    normalizedY: (event.clientY / window.innerHeight - 0.5) * 2,
+  };
+  emit();
+}
 
-  return position;
+function handleMouseMove(event: MouseEvent) {
+  pendingMouseEvent = event;
+  if (rafId !== 0) return;
+  rafId = requestAnimationFrame(commitPendingMouseEvent);
+}
+
+function startListening() {
+  if (isListening || typeof window === "undefined") return;
+  isListening = true;
+  window.addEventListener("mousemove", handleMouseMove, { passive: true });
+}
+
+function stopListening() {
+  if (!isListening || typeof window === "undefined") return;
+  isListening = false;
+  window.removeEventListener("mousemove", handleMouseMove);
+  if (rafId !== 0) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  pendingMouseEvent = null;
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  startListening();
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      stopListening();
+    }
+  };
+}
+
+type UseMousePositionOptions = {
+  disabled?: boolean;
+};
+
+export function useMousePosition(options?: UseMousePositionOptions): MousePosition {
+  const disabled = options?.disabled ?? false;
+  const value = useSyncExternalStore(subscribe, () => mousePosition, () => INITIAL_POSITION);
+
+  return useMemo(() => (disabled ? INITIAL_POSITION : value), [disabled, value]);
 }

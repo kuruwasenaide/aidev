@@ -7,18 +7,10 @@
 
 import { useMousePosition } from "@/hooks/useMousePosition";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-import { MorphingText } from "@/components/ui/morphing-text";
-
-const MORPH_WORDS = [
-  "mudança",
-  "evolução",
-  "adaptação",
-  "progresso",
-];
 
 export default function AvatarFloat() {
-  const mouse = useMousePosition();
   const reducedMotion = usePrefersReducedMotion();
+  const mouse = useMousePosition({ disabled: reducedMotion });
 
   const parallaxX = reducedMotion ? 0 : mouse.normalizedX * 10;
   const parallaxY = reducedMotion ? 0 : mouse.normalizedY * 8;

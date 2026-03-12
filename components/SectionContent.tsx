@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import LiquidGlassCard from "./LiquidGlassCard";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 
 const LINK_REGEX = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
 const BOLD_REGEX = /\*\*(.+?)\*\*/g;
@@ -120,22 +120,16 @@ function parseMessageContent(content: string): React.ReactNode {
   return result;
 }
 import {
-  BookOpen,
   Brain,
   Salad,
   Code2,
-  Coffee,
   Gamepad,
   ExternalLink,
-  Footprints,
-  Gamepad2,
   Github,
   Linkedin,
   Mail,
   MessageSquare,
-  Music,
   ShoppingBag,
-  Puzzle,
   Sparkles,
   Terminal,
   Phone,
@@ -150,15 +144,15 @@ interface SectionContentProps {
 }
 
 const sectionVariants = {
-  initial: { opacity: 0, y: 12, filter: "blur(4px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-  exit: { opacity: 0, y: -8, filter: "blur(4px)" },
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
 };
 
 /* ---- Profile Section ---- */
 function ProfileSection() {
-  const mouse = useMousePosition();
   const reducedMotion = usePrefersReducedMotion();
+  const mouse = useMousePosition({ disabled: reducedMotion });
 
   const socials = [
     { label: "GitHub", href: "https://github.com/kuruwasenaide", icon: <Github className="w-4 h-4" /> },
@@ -632,46 +626,6 @@ function SkillsSection() {
   );
 }
 
-/* ---- Fun Section ---- */
-function FunSection() {
-  const interests = [
-    { icon: <Gamepad2 className="w-6 h-6 text-primary" />, title: "Gaming", description: "Competitive FPS and indie roguelikes" },
-    { icon: <Music className="w-6 h-6 text-primary" />, title: "Music Production", description: "Lo-fi beats and ambient soundscapes" },
-    { icon: <BookOpen className="w-6 h-6 text-primary" />, title: "Sci-Fi Reading", description: "Hard sci-fi and speculative fiction" },
-    { icon: <Footprints className="w-6 h-6 text-primary" />, title: "Running", description: "Half-marathons and trail running" },
-    { icon: <Puzzle className="w-6 h-6 text-primary" />, title: "Puzzles", description: "Competitive programming and CTFs" },
-    { icon: <Coffee className="w-6 h-6 text-primary" />, title: "Coffee", description: "Pour-over enthusiast, light roasts" },
-  ];
-
-  return (
-    <LiquidGlassCard className="p-6 sm:p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Music className="w-5 h-5 text-primary" />
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-          When I&apos;m Not Coding
-        </h2>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {interests.map((item) => (
-          <div
-            key={item.title}
-            className="p-4 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border-subtle)]
-                       hover:bg-[var(--glass-bg-hover)] transition-all duration-200
-                       hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <div className="mb-2">{item.icon}</div>
-            <h3 className="font-semibold text-sm mb-1">{item.title}</h3>
-            <p className="text-xs text-muted-foreground">{item.description}</p>
-          </div>
-        ))}
-      </div>
-    </LiquidGlassCard>
-  );
-}
-
 /* ---- Contact Section ---- */
 function ContactSection() {
   const links = [
@@ -728,10 +682,46 @@ function ChatSection() {
   const { messages, isTyping, streamingContent, clearChat, abortGeneration } =
     useChat();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const lastSmoothScrollRef = useRef(0);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      const now = Date.now();
+      const shouldSmoothScroll =
+        streamingContent === null && now - lastSmoothScrollRef.current > 250;
+      chatEndRef.current?.scrollIntoView({
+        behavior: shouldSmoothScroll ? "smooth" : "auto",
+      });
+      if (shouldSmoothScroll) {
+        lastSmoothScrollRef.current = now;
+      }
+    });
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
   }, [messages, isTyping, streamingContent]);
+
+  const parsedMessages = useMemo(
+    () =>
+      messages.map((msg) => ({
+        id: msg.id,
+        role: msg.role,
+        rendered:
+          msg.role === "assistant" ? parseMessageContent(msg.content) : msg.content,
+      })),
+    [messages]
+  );
+
+  const parsedStreamingContent = useMemo(() => {
+    if (!streamingContent) return "\u00a0";
+    return parseMessageContent(streamingContent);
+  }, [streamingContent]);
 
   return (
     <LiquidGlassCard className="p-4 sm:p-6">
@@ -755,14 +745,14 @@ function ChatSection() {
           </p>
         ) : (
           <>
-            {messages.map((msg, i) => (
+            {parsedMessages.map((msg, i) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{
                   duration: 0.35,
-                  delay: i === messages.length - 1 ? 0.05 : 0,
+                  delay: i === parsedMessages.length - 1 ? 0.05 : 0,
                   ease: [0.4, 0, 0.2, 1],
                 }}
                 className={cn(
@@ -777,9 +767,7 @@ function ChatSection() {
                   )}
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {msg.role === "assistant"
-                      ? parseMessageContent(msg.content)
-                      : msg.content}
+                    {msg.rendered}
                   </p>
                 </div>
               </motion.div>
@@ -793,9 +781,7 @@ function ChatSection() {
               >
                 <div className="glass-bubble px-4 py-2.5 max-w-[85%] flex items-center gap-2">
                   <p className="text-sm leading-relaxed whitespace-pre-wrap flex-1">
-                    {streamingContent
-                      ? parseMessageContent(streamingContent)
-                      : "\u00a0"}
+                    {parsedStreamingContent}
                   </p>
                   <button
                     type="button"

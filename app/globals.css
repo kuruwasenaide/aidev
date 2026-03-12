@@ -46,9 +46,9 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-display: 'Satoshi', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-body: var(--font-inter), -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), 'SF Mono', 'Fira Code', monospace;
 }
 
 /* ============================================================
@@ -106,7 +106,7 @@
   --glass-border-subtle: rgba(0, 0, 0, 0.06);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
   --glass-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
-  --glass-blur: 24px;
+  --glass-blur: 20px;
   --glass-glow: rgba(80, 80, 80, 0.12);
   --glass-specular: rgba(255, 255, 255, 0.8);
   --glass-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -173,7 +173,7 @@
   --glass-border-subtle: rgba(255, 255, 255, 0.04);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
   --glass-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
-  --glass-blur: 24px;
+  --glass-blur: 20px;
   --glass-glow: rgba(180, 180, 180, 0.12);
   --glass-specular: rgba(255, 255, 255, 0.06);
   --glass-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -234,8 +234,6 @@
   }
 }
 
-@import "tailwindcss";
-
 @theme inline {
   --animate-first: moveVertical 30s ease infinite;
   --animate-second: moveInCircle 20s reverse infinite;
@@ -286,6 +284,12 @@
 .animate-third { animation: var(--animate-third); }
 .animate-fourth { animation: var(--animate-fourth); }
 .animate-fifth { animation: var(--animate-fifth); }
+
+@media (max-width: 768px) {
+  .gradients-container {
+    filter: blur(20px);
+  }
+}
 
 /* ============================================================
    COMPONENTS LAYER
@@ -371,11 +375,11 @@
   /* ---- Glass Input ---- */
   .glass-input {
     background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-inner-highlight);
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
   }
 
   .glass-input:focus-within {
@@ -388,8 +392,8 @@
   .glass-bubble {
     position: relative;
     background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     border-radius: 1.25rem;
@@ -416,8 +420,7 @@
   .aurora-blob {
     position: absolute;
     border-radius: 50%;
-    filter: blur(80px);
-    will-change: transform;
+    filter: blur(64px);
   }
 
   /* ---- Typing Indicator ---- */

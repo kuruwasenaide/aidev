@@ -163,14 +163,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       const decoder = new TextDecoder();
       let full = "";
+      let lastPaint = 0;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         full += chunk;
-        setStreamingContent(full);
+        const now = Date.now();
+        if (now - lastPaint >= 80) {
+          setStreamingContent(full);
+          lastPaint = now;
+        }
       }
+      setStreamingContent(full);
 
       setMessages((prev) =>
         trimToMaxUserMessages(
