@@ -20,6 +20,23 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Como configurar Gemini (chat)
+
+O chat usa **Gemini** (Google) como LLM. A API key **nunca** é exposta no cliente; todas as chamadas passam pelo endpoint `/api/chat`.
+
+1. **Criar chave**: em [Google AI Studio](https://aistudio.google.com/apikey), crie uma API key.
+2. **Arquivo de ambiente**: copie `.env.local.example` para `.env.local` e preencha:
+   - `GEMINI_API_KEY=<sua-chave>`
+   - Opcional: `GEMINI_MODEL=gemini-2.0-flash` (padrão; descontinuado em 31/03/2026).
+   - Opcional: `GEMINI_FALLBACK_MODEL=gemini-2.5-flash` e `GEMINI_USE_FALLBACK_MODEL=true` para usar o modelo de fallback sem alterar código.
+   - Opcional (anti-spam do chat):
+     - `CHAT_RATE_LIMIT_MAX_REQUESTS=8`
+     - `CHAT_RATE_LIMIT_WINDOW_MS=60000`
+     - `CHAT_RATE_LIMIT_MIN_INTERVAL_MS=1200`
+3. **Rodar**: `npm run dev` e usar o input do chat na página. A conversa aparece na aba **Chat**.
+
+Streaming está ativo: a resposta aparece em tempo real. Em caso de erro (chave inválida, rate limit, etc.), a mensagem de erro é exibida na própria conversa.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
